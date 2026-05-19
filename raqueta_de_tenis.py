@@ -62,7 +62,7 @@ theta2_lista = [0]
 
 t_lista = [0]
 # Paso temporal
-dt = 0.1 #s
+dt = 0.001 #s
 # Tiempo final
 tf = 60 #s
 
