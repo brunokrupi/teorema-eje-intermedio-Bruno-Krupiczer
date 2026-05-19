@@ -116,6 +116,26 @@ f2 = theta2/(2*np.pi)
 N = np.max(f2)-np.min(f2)
 print(f"Vueltas entre cambios de orientacion consecutivos: {round(N,1)}")
 
+#Energia
+w1_lista = np.array(w1_lista)
+w2_lista = np.array(w2_lista)
+w3_lista = np.array(w3_lista)
+E=0.5*(I1*(w1_lista)**2 + I2*(w2_lista)**2 +I3*(w3_lista**2))
+#Variacion dE
+# Indices de cada tramo estable
+t_lista = np.array(t_lista)
+idx_tramo1 = np.where((t_lista >= 0) & (t_lista < tmin))[0]
+idx_tramo2 = np.where((t_lista >= tmin) & (t_lista < tmax))[0]
+idx_tramo3 = np.where(t_lista >= tmax)[0]
+# Energia promedio en cada tramo
+E_tramo1 = np.mean(E[idx_tramo1])
+E_tramo2 = np.mean(E[idx_tramo2])
+E_tramo3 = np.mean(E[idx_tramo3])
+dE1 = E_tramo2 - E_tramo1
+dE2 = E_tramo3 - E_tramo2
+print(f"ΔE salto 1 = {dE1:.2f}")
+print(f"ΔE salto 2 = {dE2:.2f}")
+
 # Graficos de las velocidades angulares
 #plt.plot(t_lista,w1_lista,label=r'$\omega_1$',linestyle='-.', color='limegreen')
 plt.plot(t_lista,w2_lista,label=r'$\omega_2$',linestyle='--', color='darkcyan')
@@ -135,5 +155,15 @@ plt.ylabel(r'Numero de vueltas, $n_2$ ')
 plt.grid(color='darkgray')
 plt.legend()
 plt.title('Numero de vueltas en el eje 2')
+plt.xlim(0,tf)
+plt.show()
+
+#Grafico Energia
+plt.plot(t_lista,E,label=r'Energia', color='darkcyan')
+plt.xlabel('Tiempo, t [s]')
+plt.ylabel(r'Energia, E [J]')
+plt.grid(color='darkgray')
+plt.legend()
+plt.title('Energia del sistema')
 plt.xlim(0,tf)
 plt.show()
