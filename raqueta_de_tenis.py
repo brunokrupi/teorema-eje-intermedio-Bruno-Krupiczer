@@ -167,3 +167,34 @@ plt.legend()
 plt.title('Energia del sistema')
 plt.xlim(0,tf)
 plt.show()
+
+#Momento Angular al cuadrado
+L_cuad = (I1 * w1_lista)**2 + (I2 * w2_lista)**2 + (I3 * w3_lista)**2
+#condición de la elipse G=1
+G = ((w1_lista)**2) / ((2 * E * I2 - L_cuad) / (I1 * (I2 - I1))) + ((w3_lista)**2) / ((2 * E * I2 - L_cuad) / (I3 * (I2 - I3)))
+# Pendiente asintótica |A|/|B|
+pendiente = np.sqrt(I3*(I2 - I3) / (I1*(I1 - I2)))
+print(f"\n|A|/|B| = {pendiente:.4f}")
+
+#Grafico G
+plt.plot(t_lista,G,label=r'', color='darkcyan')
+plt.ylim(0, 2)
+plt.xlabel('Tiempo, t [s]')
+plt.ylabel(r', E [J]')
+plt.grid(color='darkgray')
+plt.legend()
+plt.title('G=1')
+plt.xlim(0,tf)
+plt.show()
+
+#grafico wi vs wj 
+plt.plot(w2_lista,w1_lista,label=r'$\omega_1$ vs $\omega_2$', color='limegreen')
+plt.plot(w3_lista,w1_lista,label=r'$\omega_1$ vs $\omega_3$', color='darkcyan')
+plt.plot(w2_lista,w3_lista,label=r'$\omega_3$ vs $\omega_2$', color='orangered')
+plt.xlabel(r'Componente horizontal de velocidad angular ')
+plt.ylabel(r'Componente vertical de velocidad angular')
+plt.grid(color='darkgray')
+plt.legend()
+plt.title('Proyecciones Bidimensionales del Espacio de Fases.')
+plt.xlim(-2,2)
+plt.show()
