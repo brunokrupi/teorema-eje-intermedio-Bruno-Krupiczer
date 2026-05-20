@@ -1,0 +1,265 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Datos
+rho = 7850 #kg/m3
+# Barra 1
+L1 = 2 #m
+D1 = 0.5 #m
+R1 = D1/2
+m1 = rho*np.pi*R1**2*L1
+# Barra 2
+L2 = 1 #m
+D2 = 0.25 #m
+R2 = D2/2
+m2 = rho*np.pi*R2**2*L2
+
+# Posicion del centro de masa desde sistema 1
+r_CM1 = m2*(R1+L2/2)/(m1+m2)
+# Posicion del centro de masa desde sistema 2
+r_CM2 = R1+L2/2 - m2*(R1+L2/2)/(m1+m2)
+
+#Tensor de inercia
+# Barra 1 en sistema 1
+Ix1x1 = m1/12*(L1**2+3*R1**2)
+Iy1y1 = Ix1x1
+Iz1z1 = m1*R1**2/2
+# Barra 2 en sistema 2
+Ix2x2 = m2/12*(L2**2+3*R2**2)
+Iy2y2 = Ix2x2
+Iz2z2 = m2*R2**2/2
+# Barra 1 en CM
+Ix1x1_CM = Iy1y1 + m1*r_CM1**2
+Iy1y1_CM = Ix1x1
+Iz1z1_CM = Iz1z1 + m1*r_CM1**2
+# Barra 2 en CM
+Ix2x2_CM = Iy2y2 + m2*r_CM2**2
+Iy2y2_CM = Iz2z2
+Iz2z2_CM = Ix2x2 + m2*r_CM2**2
+# TOTAL en CM
+Ixx = Ix1x1_CM + Ix2x2_CM
+Iyy = Iy1y1_CM + Iy2y2_CM
+Izz = Iz1z1_CM + Iz2z2_CM
+
+# Momentos principales de inercia
+lista = sorted([Ixx,Iyy,Izz])
+I1 = max([Ixx,Iyy,Izz])
+I2 = lista[1]
+I3 = min([Ixx,Iyy,Izz])
+
+# Condiciones iniciales
+w1_0 = 1e-3 #rad/s
+w2_0 = 1 #rad/s
+w3_0 = 1e-3 #rad/s
+
+# Listas de velocidades angulares
+w1_lista = [w1_0]
+w2_lista = [w2_0]
+w3_lista = [w3_0]
+
+#Listas de angulos
+theta2_lista = [0]
+
+t_lista = [0]
+# Paso temporal
+dt = 0.001 #s
+# Tiempo final
+tf = 60 #s
+
+# Metodo de FOWARD-EULER
+t = 0
+i = 0
+while t<tf:
+   
+    f1 = ((I3-I2)/I1) * w2_lista[i]*w3_lista[i]
+    w1 = w1_lista[i] + dt*f1
+   
+    f2 = ((I1-I3)/I2) * w1_lista[i]*w3_lista[i]
+    w2 = w2_lista[i] + dt*f2
+
+    f3 = ((I2-I1)/I3) * w2_lista[i]*w1_lista[i]
+    w3 = w3_lista[i] + dt*f3
+   
+    theta2 = dt*w2 + theta2_lista[i]
+    theta2_lista.append(theta2)
+   
+    w1_lista.append(w1)
+    w2_lista.append(w2)
+    w3_lista.append(w3)
+   
+    i += 1
+    t += dt
+    t_lista.append(t)
+
+# Ventana temporal entre cambios de orientacion consecutivos
+w3_lista = np.array(w3_lista)
+idx1 = np.argmin(w3_lista)
+idx2 = np.argmax(w3_lista)
+tmin = t_lista[idx1]
+tmax = t_lista[idx2]
+DT = tmax - tmin
+
+# Velocidad angular en eje 2
+w2_lista = np.array(w2_lista)
+w2_cte = abs(np.min(w2_lista))
+
+# Vueltas entre cambios de orientacion consecutivos (METODO APROXIMADO)
+Dtheta = w2_cte*DT
+N = Dtheta/(2*np.pi)
+print(f"Vueltas entre cambios de orientacion consecutivos (APROX): {round(N,1)}")
+
+# Angulo en funcion del tiempo
+theta2 = np.array(theta2_lista)
+# Frecuencia
+f2 = theta2/(2*np.pi)
+# Numero de vueltas entre cambios de orientacion consecutivos
+N = np.max(f2)-np.min(f2)
+print(f"Vueltas entre cambios de orientacion consecutivos: {round(N,1)}")
+
+#Energia
+w1_lista = np.array(w1_lista)
+w2_lista = np.array(w2_lista)
+w3_lista = np.array(w3_lista)
+E=0.5*(I1*(w1_lista)**2 + I2*(w2_lista)**2 +I3*(w3_lista**2))
+#Variacion dE
+# Indices de cada tramo estable
+t_lista = np.array(t_lista)
+idx_tramo1 = np.where((t_lista >= 0) & (t_lista < tmin))[0]
+idx_tramo2 = np.where((t_lista >= tmin) & (t_lista < tmax))[0]
+idx_tramo3 = np.where(t_lista >= tmax)[0]
+# Energia promedio en cada tramo
+E_tramo1 = np.mean(E[idx_tramo1])
+E_tramo2 = np.mean(E[idx_tramo2])
+E_tramo3 = np.mean(E[idx_tramo3])
+dE1 = E_tramo2 - E_tramo1
+dE2 = E_tramo3 - E_tramo2
+print(f"ΔE salto 1 = {dE1:.2f}")
+print(f"ΔE salto 2 = {dE2:.2f}")
+
+#Momento Angular al cuadrado
+L_cuad = (I1 * w1_lista)**2 + (I2 * w2_lista)**2 + (I3 * w3_lista)**2
+#condición de la elipse G=1
+G = ((w1_lista)**2) / ((2 * E * I2 - L_cuad) / (I1 * (I2 - I1))) + ((w3_lista)**2) / ((2 * E * I2 - L_cuad) / (I3 * (I2 - I3)))
+# Pendiente asintótica |A|/|B|
+pendiente = np.sqrt(I3*(I2 - I3) / (I1*(I1 - I2)))
+print(f"\n|A|/|B| = {pendiente:.4f}")
+
+
+from mpl_toolkits.mplot3d import Axes3D
+
+# =======================================================
+# 🔥 GRÁFICO 3D: EL ELIPSOIDE DE POINSOT Y TU TRAYECTORIA
+# =======================================================
+
+# 1. Tomamos el valor de la energía inicial de tu simulación
+E0 = E[0]
+
+# 2. Calculamos los semiejes del elipsoide de Poinsot
+a_eje1 = np.sqrt(2 * E0 / I1)
+a_eje2 = np.sqrt(2 * E0 / I2)
+a_eje3 = np.sqrt(2 * E0 / I3)
+
+# 3. Creamos una malla angular (esférica) para dibujar la superficie 3D
+theta_mesh = np.linspace(0, np.pi, 60)
+phi_mesh = np.linspace(0, 2 * np.pi, 60)
+theta_mesh, phi_mesh = np.meshgrid(theta_mesh, phi_mesh)
+
+# 4. Parametrizamos el elipsoide en el espacio de velocidades angulares
+W1_elipsoide = a_eje1 * np.sin(theta_mesh) * np.cos(phi_mesh)
+W2_elipsoide = a_eje2 * np.sin(theta_mesh) * np.sin(phi_mesh)
+W3_elipsoide = a_eje3 * np.cos(theta_mesh)
+
+# 5. Creamos la figura en 3D
+fig = plt.figure(figsize=(9, 7))
+ax = fig.add_subplot(111, projection='3d')
+
+# Dibujamos el Elipsoide de Poinsot (transparente para poder ver la trayectoria adentro)
+ax.plot_surface(W1_elipsoide, W2_elipsoide, W3_elipsoide,
+                color='cyan', alpha=0.15, edgecolor='darkcyan', linewidth=0.3)
+
+# Dibujamos la trayectoria REAL que calculó tu método de Forward Euler
+ax.plot(w1_lista, w2_lista, w3_lista,
+        color='orangered', linewidth=2.5, label='Trayectoria Simulada (Polhodia)')
+
+# Marcamos el punto donde arranca la simulación
+ax.scatter(w1_0, w2_0, w3_0, color='red', s=40, zorder=10, label='Condición Inicial')
+
+# Configuración de los ejes del espacio de fases 3D
+ax.set_xlabel(r'$\omega_1$ (Eje Mayor) [rad/s]')
+ax.set_ylabel(r'$\omega_2$ (Eje Intermedio) [rad/s]')
+ax.set_zlabel(r'$\omega_3$ (Eje Menor) [rad/s]')
+ax.set_title('Elipsoide de Energía de Poinsot en el Espacio de Fases 3D')
+
+# Forzamos los límites para que se vea simétrico y proporcional
+max_range = max(a_eje1, a_eje2, a_eje3)
+ax.set_xlim(-max_range, max_range)
+ax.set_ylim(-max_range, max_range)
+ax.set_zlim(-max_range, max_range)
+
+ax.legend()
+plt.show()
+
+import matplotlib.animation as animation
+
+# =======================================================
+# 🔥 ANIMACIÓN 3D: EVOLUCIÓN DE LA POLHODIA EN EL TIEMPO
+# =======================================================
+
+# 1. Creamos una nueva figura para la animación
+fig_anim = plt.figure(figsize=(9, 7))
+ax_anim = fig_anim.add_subplot(111, projection='3d')
+
+# 2. Dibujamos el elipsoide de Poinsot estático de fondo
+ax_anim.plot_surface(W1_elipsoide, W2_elipsoide, W3_elipsoide,
+                     color='cyan', alpha=0.1, edgecolor='darkcyan', linewidth=0.2)
+
+# 3. Inicializamos los objetos gráficos que se van a actualizar en cada frame
+# Línea naranja que representa la trayectoria que se va dibujando
+linea_evolutiva, = ax_anim.plot([], [], [], color='orangered', linewidth=2.5, label='Polhodia (Trayectoria)')
+# Un punto rojo brillante que representa la posición de la velocidad angular en el instante actual
+punto_actual, = ax_anim.plot([], [], [], color='red', marker='o', markersize=6, zorder=10)
+
+# Configuración de la estética de la caja 3D
+ax_anim.set_xlabel(r'$\omega_1$ (Eje Mayor) [rad/s]')
+ax_anim.set_ylabel(r'$\omega_2$ (Eje Intermedio) [rad/s]')
+ax_anim.set_zlabel(r'$\omega_3$ (Eje Menor) [rad/s]')
+ax_anim.set_title('Dinámica del Vector Velocidad Angular en el Elipsoide de Poinsot')
+
+ax_anim.set_xlim(-max_range, max_range)
+ax_anim.set_ylim(-max_range, max_range)
+ax_anim.set_zlim(-max_range, max_range)
+ax_anim.legend()
+
+# 4. Decimación de datos para optimizar la fluidez de la animación
+# Tomamos 1 de cada 100 puntos de tu simulación para no saturar la memoria gráfica
+paso_anim = 100
+w1_anim = w1_lista[::paso_anim]
+w2_anim = w2_lista[::paso_anim]
+w3_anim = w3_lista[::paso_anim]
+
+# 5. Función de inicialización para Matplotlib Animation
+def init():
+    linea_evolutiva.set_data([], [])
+    linea_evolutiva.set_3d_properties([])
+    punto_actual.set_data([], [])
+    punto_actual.set_3d_properties([])
+    return linea_evolutiva, punto_actual
+
+# 6. Función de actualización frame por frame
+def actualizar(num):
+    # Va acumulando la trayectoria recorrida hasta el frame actual
+    linea_evolutiva.set_data(w1_anim[:num], w2_anim[:num])
+    linea_evolutiva.set_3d_properties(w3_anim[:num])
+   
+    # Coloca la punta del vector en la posición instantánea
+    punto_actual.set_data([w1_anim[num-1]], [w2_anim[num-1]])
+    punto_actual.set_3d_properties([w3_anim[num-1]])
+   
+    return linea_evolutiva, punto_actual
+
+# 7. Creamos la animación
+# interval=20 define el tiempo de espera entre frames en milisegundos
+ani = animation.FuncAnimation(fig_anim, actualizar, frames=len(w1_anim),
+                              init_func=init, interval=20, blit=True, repeat=True)
+
+plt.show()
